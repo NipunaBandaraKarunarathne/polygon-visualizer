@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Canvas Closest Point to Polygon</title>
+  <style>
+    body {
+      margin: 0;
+      background: #111;
+      color: #eee;
+      font-family: sans-serif;
+    }
+    canvas {
+      display: block;
+      background: #1e1e1e;
+      cursor: crosshair;
+    }
+    .info {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      background: rgba(0,0,0,0.6);
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="info">
+  <div>Drag the blue point</div>
+  <div>Closest point on polygon</div>
+  <div>Click canvas to add polygon vertices</div>
+</div>
+
+<canvas id="canvas" width="900" height="500"></canvas>
+
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+/* -----------------------------
+   Polygon (hardcoded initially)
+------------------------------ */
+let polygon = [
+  { x: 200, y: 120 },
+  { x: 500, y: 100 },
+  { x: 650, y: 260 },
+  { x: 420, y: 380 },
+  { x: 180, y: 300 }
+];
+
+/* -----------------------------
+   Test point (draggable)
+------------------------------ */
+let testPoint = { x: 350, y: 220 };
+let draggingPoint = false;
+
+/* -----------------------------
+   Math helpers
+------------------------------ */
+function dist2(a, b) {
+  const dx = a.x - b.x;
+  const dy = a.y - b.y;
+  return dx * dx + dy * dy;
+}
+
+// Closest point on segment AB to point P
+function closestPointOnSegment(A, B, P) {
+  const ABx = B.x - A.x;
+  const ABy = B.y - A.y;
+  const APx = P.x - A.x;
+  const APy = P.y - A.y;
+
+  const ab2 = ABx * ABx + ABy * ABy;
+  const t = Math.max(0, Math.min(1, (APx * ABx + APy * ABy) / ab2));
+
+  return {
+    x: A.x + ABx * t,
+    y: A.y + ABy * t
+  };
+}
+
+// Closest point on polygon edges
+function closestPointOnPolygon(poly, P) {
+  let closest = null;
+  let minDist = Infinity;
+
+  for (let i = 0; i < poly.length; i++) {
+    const A = poly[i];
+    const B = poly[(i + 1) % poly.length];
+
+    const cp = closestPointOnSegment(A, B, P);
+    const d = dist2(cp, P);
+
+    if (d < minDist) {
+      minDist = d;
+      closest = cp;
+    }
+  }
+  return closest;
+}
+
+/* -----------------------------
+   Drawing
+------------------------------ */
+function drawPolygon() {
+  ctx.strokeStyle = "#fff";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  polygon.forEach((p, i) => {
+    if (i === 0) ctx.moveTo(p.x, p.y);
+    else ctx.lineTo(p.x, p.y);
+  });
+  ctx.closePath();
+  ctx.stroke();
+
+  // vertices
+  polygon.forEach(p => {
+    ctx.fillStyle = "#ff0";
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+function drawPoint(p, color, r = 6) {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawLine(a, b, color) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(a.x, a.y);
+  ctx.lineTo(b.x, b.y);
+  ctx.stroke();
+}
+
+/* -----------------------------
+   Mouse interaction
+------------------------------ */
+canvas.addEventListener("mousedown", e => {
+  const rect = canvas.getBoundingClientRect();
+  const mouse = {
+    x: e.clientX - rect.left,
+    y: e.clientY - rect.top
+  };
+
+  if (dist2(mouse, testPoint) < 100) {
+    draggingPoint = true;
+  } else {
+    // Bonus: add vertex
+    polygon.push(mouse);
+  }
+});
+
+canvas.addEventListener("mousemove", e => {
+  if (!draggingPoint) return;
+  const rect = canvas.getBoundingClientRect();
+  testPoint.x = e.clientX - rect.left;
+  testPoint.y = e.clientY - rect.top;
+});
+
+canvas.addEventListener("mouseup", () => {
+  draggingPoint = false;
+});
+
+/* -----------------------------
+   Render loop
+------------------------------ */
+function render() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  drawPolygon();
+
+  const closest = closestPointOnPolygon(polygon, testPoint);
+
+  drawLine(testPoint, closest, "#0f0");
+  drawPoint(closest, "#0f0", 5);
+  drawPoint(testPoint, "#09f", 7);
+
+  requestAnimationFrame(render);
+}
+
+render();
+</script>
+</body>
+</html>
