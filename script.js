@@ -1,9 +1,14 @@
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
-/* =========================
-   Mouse
-========================= */
+// Layout positions 
+
+const ROW1_Y = 150;
+const ROW2_Y = 380;
+const COL_LEFT = 200;
+const COL_RIGHT = 520;
+
+//  Mouse 
 let mouse = { x: 0, y: 0 };
 
 canvas.addEventListener("mousemove", (e) => {
@@ -12,9 +17,9 @@ canvas.addEventListener("mousemove", (e) => {
   mouse.y = e.clientY - r.top;
 });
 
-/* =========================
-   Math helpers
-========================= */
+
+ //  Math helpers
+
 function dist2(a, b) {
   const dx = a.x - b.x;
   const dy = a.y - b.y;
@@ -37,9 +42,6 @@ function closestPointOnSegment(a, b, p) {
   };
 }
 
-/* =========================
-   Closest point on polygon
-========================= */
 function closestPointOnPolygon(poly, p) {
   let closest = null;
   let minDist = Infinity;
@@ -58,15 +60,15 @@ function closestPointOnPolygon(poly, p) {
   return closest;
 }
 
-/* =========================
-   Shape helpers
-========================= */
-function rectangleToPolygon(x, y, w, h) {
+
+ //  Shape helpers
+
+function rectangleFromCenter(cx, cy, w, h) {
   return [
-    { x: x, y: y },
-    { x: x + w, y: y },
-    { x: x + w, y: y + h },
-    { x: x, y: y + h },
+    { x: cx - w / 2, y: cy - h / 2 },
+    { x: cx + w / 2, y: cy - h / 2 },
+    { x: cx + w / 2, y: cy + h / 2 },
+    { x: cx - w / 2, y: cy + h / 2 },
   ];
 }
 
@@ -82,19 +84,32 @@ function regularPolygon(cx, cy, radius, sides, rotation = -Math.PI / 2) {
   return pts;
 }
 
-/* =========================
-   Shapes (NO OVERLAP)
-========================= */
+function chevronShape(cx, cy, width, height, notchDepth) {
+  const hw = width / 2;
+  const hh = height / 2;
+  return [
+    { x: cx - hw, y: cy - hh },
+    { x: cx + hw, y: cy - hh },
+    { x: cx + hw, y: cy + hh },
+    { x: cx,      y: cy + hh - notchDepth },
+    { x: cx - hw, y: cy + hh },
+  ];
+}
+
+
+ //  Shapes (ORDERED)
+
 // Row 1
-const rectangle = rectangleToPolygon(80, 80, 220, 140);
-const triangle = regularPolygon(520, 150, 90, 3);
+const triangle = regularPolygon(COL_LEFT, ROW1_Y, 90, 3);
+const square   = rectangleFromCenter(COL_RIGHT, ROW1_Y, 160, 160);
 
 // Row 2
-const pentagon = regularPolygon(350, 350, 90, 5);
+const chevron  = chevronShape(COL_LEFT, ROW2_Y, 180, 160, 70);
+const pentagon = regularPolygon(COL_RIGHT, ROW2_Y, 80, 5);
 
-/* =========================
-   Drawing helpers
-========================= */
+
+//   Drawing helpers
+
 function drawPolygon(poly) {
   ctx.beginPath();
   poly.forEach((p, i) => {
@@ -105,30 +120,30 @@ function drawPolygon(poly) {
 }
 
 function drawDot(p) {
+  if (!p) return;
   ctx.fillStyle = "#fff";
   ctx.beginPath();
   ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
   ctx.fill();
 }
 
-/* =========================
-   Render loop
-========================= */
+
+  // Render
+
 function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-
   ctx.strokeStyle = "#fff";
   ctx.lineWidth = 2;
 
-  // Rectangle (row 1 - left)
-  drawPolygon(rectangle);
-  drawDot(closestPointOnPolygon(rectangle, mouse));
-
-  // Triangle (row 1 - right)
   drawPolygon(triangle);
   drawDot(closestPointOnPolygon(triangle, mouse));
 
-  // Pentagon (row 2 - center)
+  drawPolygon(square);
+  drawDot(closestPointOnPolygon(square, mouse));
+
+  drawPolygon(chevron);
+  drawDot(closestPointOnPolygon(chevron, mouse));
+
   drawPolygon(pentagon);
   drawDot(closestPointOnPolygon(pentagon, mouse));
 
@@ -136,3 +151,5 @@ function render() {
 }
 
 render();
+
+//end of script.js
